@@ -90,3 +90,197 @@ This document covers the engineering procedure for upgrading the Tomcat applicat
 * Post-upgrade operational checks
 
 The Development implementation serves as the proven reference model for execution in Test and Production.
+
+---
+
+# Installation Preparation
+
+Prior to upgrading Apache Tomcat from version **9.0.87** to **9.0.117**, a full review of the existing installation and configuration was completed to ensure a controlled in-place upgrade with a clear rollback path.
+
+As the environment is a single-instance deployment supporting the BMC Remedy Action Request System Mid Tier service, preserving the existing configuration and ensuring rapid recovery capability were critical preparation steps.
+
+---
+
+## 1. Identify Existing Installation Locations
+
+The following installation paths were confirmed on the server:
+
+### Remedy AR System
+
+```text id="r1"
+E:\Program Files\BMC Software\
+```
+
+This contains the core Remedy application server components and supporting services.
+
+### Java Runtime
+
+```text id="r2"
+E:\Program Files\Java\
+```
+
+This provides the Java runtime required by Tomcat and Remedy Mid Tier.
+
+### Apache Tomcat
+
+```text id="r3"
+E:\Program Files\Apache Software Foundation\Tomcat 9.0\
+```
+
+This hosts the Remedy Mid Tier web application and provides browser access to Remedy via the `/arsys` context.
+
+---
+
+## 2. Confirm Existing Software Versions
+
+The currently installed software versions were verified prior to upgrade:
+
+| Component                        | Version            |
+| -------------------------------- | ------------------ |
+| Apache Tomcat                    | 9.0.87             |
+| BMC Remedy Action Request System | 20.02.00 Patch 006 |
+| Java Platform, Standard Edition  | 1.8.0 Update 45    |
+
+This ensured compatibility validation before proceeding with the Tomcat upgrade.
+
+---
+
+## 3. Validate Existing Service Access
+
+Prior to any maintenance activity, successful access to both the local Tomcat service and the external Remedy Mid Tier URL was confirmed.
+
+### Local Tomcat Validation
+
+```text id="r4"
+http://localhost:8080
+```
+
+This verified that the local Tomcat service was operational and responding correctly.
+
+### Remedy Mid Tier Validation
+
+```text id="r5"
+https://myremedy.domain.local/
+```
+
+This confirmed that the Mid Tier service was accessible externally and that user access to Remedy was functioning normally before the upgrade.
+
+This baseline validation is important for post-upgrade comparison.
+
+---
+
+## 4. Download Target Tomcat Version
+
+The upgrade package was obtained directly from the official Apache Software Foundation source.
+
+### Download Source
+
+### Selected Package
+
+The **Windows 64-bit ZIP distribution** was selected rather than the Windows installer to allow a controlled in-place binary replacement while preserving the existing service configuration.
+
+---
+
+## 5. Extract New Tomcat Version
+
+The downloaded ZIP package was extracted to the following staging location:
+
+```text id="r6"
+E:\Program Files\Apache Software Foundation\Tomcat 9.0.117\
+```
+
+This allowed the new binaries to be prepared and reviewed prior to replacing the live installation.
+
+The existing production installation remained untouched during this stage.
+
+---
+
+## 6. Stop Tomcat Service and Create Full Backup
+
+Before any modification to the live environment, the existing Tomcat service was stopped to ensure file consistency.
+
+### Service Stopped
+
+```text id="r7"
+Apache Tomcat 9
+```
+
+### Full Installation Backup Created
+
+The entire existing Tomcat installation folder was archived as a ZIP backup:
+
+### Source
+
+```text id="r8"
+E:\Program Files\Apache Software Foundation\Tomcat 9.0\
+```
+
+### Backup Location
+
+```text id="r9"
+E:\Media\Backup\
+```
+
+This backup provides the primary rollback path in the event of upgrade failure.
+
+---
+
+## 7. Record Existing Java Configuration
+
+The existing Java service configuration was documented prior to upgrade.
+
+### Confirmed Java Options
+
+Key parameters included:
+
+```text id="r10"
+-Dcatalina.home=E:\Program Files\Apache Software Foundation\Tomcat 9.0
+-Dcatalina.base=E:\Program Files\Apache Software Foundation\Tomcat 9.0
+-Djava.io.tmpdir=...
+-Djava.util.logging.config.file=...
+```
+
+This confirmed that the environment uses a **single-instance Tomcat deployment** where both `CATALINA_HOME` and `CATALINA_BASE` point to the same installation directory.
+
+These values must be preserved after upgrade to avoid service startup issues.
+
+---
+
+## 8. Review Existing server.xml Configuration
+
+The existing `server.xml` file was analysed to identify all custom configuration that must be retained during the upgrade.
+
+Key findings included:
+
+* HTTPS connector configured on **port 443**
+* SSL enabled using Java keystore
+* Custom keystore path:
+
+```text id="r11"
+E:\Remedy\Keystore\remedydev.jks
+```
+
+* Existing default host configuration under:
+
+```xml id="r12"
+<Service name="Catalina">
+<Engine name="Catalina">
+<Host appBase="webapps">
+```
+
+Preserving this configuration is critical, as loss of SSL or connector settings would prevent access to the Remedy Mid Tier application.
+
+---
+
+## Preparation Outcome
+
+At completion of the preparation phase:
+
+* Existing environment state was fully documented
+* Backup and rollback capability was established
+* Target upgrade binaries were staged
+* Java and SSL configuration dependencies were identified
+* Service validation baseline was confirmed
+
+This ensured the upgrade could proceed safely with controlled risk and a clear recovery path if required.
+
