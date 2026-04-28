@@ -1,15 +1,7 @@
 
 ---
 
-# Recommended Upgrade Method for Your Server
-
-## Tomcat 9.0.87 → 9.0.117 using ZIP Package
-
-### Safe Method:
-
-Rename old install → extract new ZIP → restore required config
-
-This is the best approach for your setup.
+## Upgrading Tomcat 9.0.87 → 9.0.117 using ZIP Package
 
 ---
 
