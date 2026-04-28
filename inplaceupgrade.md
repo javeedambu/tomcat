@@ -1,12 +1,7 @@
 
 ---
 
-## Upgrading Tomcat 9.0.87 → 9.0.117 using ZIP Package
-
----
-
-# Step-by-Step Procedure
-
+# Upgrading Tomcat 9.0.87 → 9.0.117 using ZIP Package
 ---
 
 # Step 1 — VMware Snapshot
