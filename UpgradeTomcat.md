@@ -284,3 +284,216 @@ At completion of the preparation phase:
 
 This ensured the upgrade could proceed safely with controlled risk and a clear recovery path if required.
 
+---
+# Upgrade Procedure
+
+Following successful preparation and validation in the Development environment, the in-place upgrade of Apache Tomcat from version **9.0.87** to **9.0.117** was performed using a controlled binary replacement approach.
+
+As this is a single-instance deployment supporting the BMC Remedy Action Request System Mid Tier service, preserving configuration consistency and maintaining a clear rollback path were critical throughout the implementation.
+
+---
+
+## 1. Shutdown and Infrastructure Protection
+
+Prior to any system changes, the server was gracefully shut down to ensure a clean system state and to allow infrastructure-level rollback if required.
+
+### Actions Performed
+
+* Server shutdown completed
+* Full VMware snapshot taken for rollback protection
+
+This provides a full machine-level recovery option in addition to the Tomcat file backup created during preparation.
+
+---
+
+## 2. Post-Snapshot Validation
+
+Once the server was powered back on, a final validation was performed to confirm the environment remained healthy before beginning the upgrade.
+
+The following checks were completed successfully:
+
+### Local Tomcat Access
+
+```text id="u1"
+http://localhost:8080
+```
+
+### Remedy Mid Tier Access
+
+```text id="u2"
+https://myremedy.domain.local/
+```
+
+### User Authentication Validation
+
+Successful login to the Remedy Mid Tier application was confirmed.
+
+This ensured the pre-upgrade baseline remained valid and that the snapshot represented a known-good working state.
+
+---
+
+## 3. Stop Application Services
+
+Before replacing Tomcat binaries, all related services were stopped to prevent file locking and ensure a clean transition.
+
+### Services Stopped
+
+* Apache Tomcat 9
+* BMC Remedy services (as applicable to the environment)
+
+This included the Remedy application services required to fully release file handles and prevent startup inconsistencies.
+
+---
+
+## 4. Preserve Existing Tomcat Installation
+
+The current Tomcat installation folder was retained by renaming the existing directory rather than deleting it.
+
+### Existing Folder Renamed
+
+### From
+
+```text id="u3"
+E:\Program Files\Apache Software Foundation\Tomcat 9.0\
+```
+
+### To
+
+```text id="u4"
+E:\Program Files\Apache Software Foundation\Tomcat 9.0.87\
+```
+
+This provides a fast local rollback option if required.
+
+---
+
+## 5. Promote New Tomcat Version to Live Installation
+
+The previously extracted Tomcat 9.0.117 staging folder was renamed to match the original production path.
+
+### New Folder Renamed
+
+### From
+
+```text id="u5"
+E:\Program Files\Apache Software Foundation\Tomcat 9.0.117\
+```
+
+### To
+
+```text id="u6"
+E:\Program Files\Apache Software Foundation\Tomcat 9.0\
+```
+
+This ensures the Windows service continues to reference the correct path without requiring changes to service configuration or Java options.
+
+At this stage, both versions existed on disk:
+
+* `Tomcat 9.0.87` (previous version retained)
+* `Tomcat 9.0` (new live version containing 9.0.117 binaries)
+
+---
+
+## 6. Compare Old and New Installations
+
+A detailed folder and file comparison was performed using **Beyond Compare** to identify environment-specific configuration that needed to be preserved.
+
+This step is critical because standard Tomcat ZIP extraction does not include custom SSL, application context, or Remedy-specific configuration.
+
+---
+
+## 7. Copy Required Configuration from Old Installation
+
+Based on validation in the Development environment, only the following items required migration from the old installation to the new installation.
+
+### Required File Copy
+
+### Copy:
+
+```text id="u7"
+..\Tomcat 9.0.87\conf\server.xml
+```
+
+### To:
+
+```text id="u8"
+..\Tomcat 9.0\conf\
+```
+
+This preserves:
+
+* HTTPS connector configuration
+* Port 443 listener
+* SSL keystore settings
+* existing connector tuning
+
+---
+
+### Required Folder Copy
+
+### Copy:
+
+```text id="u9"
+..\Tomcat 9.0.87\conf\Catalina\
+```
+
+### To:
+
+```text id="u10"
+..\Tomcat 9.0\conf\
+```
+
+This preserves host-specific and application-specific configuration used by the Remedy Mid Tier deployment.
+
+---
+
+## 8. Remove Unused Default Tomcat Applications
+
+The following default Tomcat folders existed in the new installation but were not present in the original environment and were therefore removed to maintain consistency.
+
+### Deleted Folders
+
+```text id="u11"
+..\Tomcat 9.0\webapps\examples\
+..\Tomcat 9.0\webapps\host-manager\
+```
+
+This avoids introducing unnecessary administrative or demonstration applications into the production environment.
+
+---
+
+## 9. Environment-Specific Validation
+
+The Development environment required only the files listed above.
+
+However, Test and Production environments may contain additional customisation depending on historical changes, SSL configuration, or deployment-specific settings.
+
+Therefore:
+
+### Additional review is mandatory for:
+
+* `conf\`
+* `webapps\`
+* SSL keystore references
+* custom certificates
+* service wrapper settings
+* logging configuration
+* Remedy-specific context configuration
+
+Any additional differences identified during comparison must be reviewed and copied where required.
+
+No assumptions should be made that all environments are identical.
+
+---
+
+## Upgrade Outcome
+
+At completion of the upgrade phase:
+
+* Tomcat binaries were successfully upgraded to version 9.0.117
+* Existing service paths remained unchanged
+* SSL and Remedy Mid Tier configuration were preserved
+* Local rollback remained available via retained 9.0.87 folder
+* Infrastructure rollback remained available via VMware snapshot
+
+The environment was then ready for post-upgrade validation and operational testing.
