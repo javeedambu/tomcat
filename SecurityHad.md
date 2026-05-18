@@ -163,26 +163,49 @@ Add the following configuration inside the `<web-app>` section.
 
 ---
 
-# Step 3 — Configure Content Security Policy (CSP)
+# Step 3 — Content Security Policy (CSP) Considerations
 
-Edit:
+## Important
 
-```text
-<Tomcat>\conf\server.xml
-```
-
-Inside the `<Host>` section add:
+Testing identified that the following configuration is not supported in the current Tomcat environment and caused the Tomcat service to fail with Windows Service Error 1067 during startup:
 
 ```xml
 <Valve className="org.apache.catalina.valves.HttpHeaderSecurityValve"
        contentSecurityPolicy="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:;" />
 ```
 
-## Notes
+As a result, this configuration should NOT be implemented in this environment.
 
-This CSP is intentionally relaxed to maintain compatibility with Remedy AR System.
+---
 
-A stricter CSP should only be implemented after application testing.
+# Recommended Approach for Remedy AR System
+
+For Remedy AR System 20.02 environments, it is recommended to:
+
+* Use Tomcat HttpHeaderSecurityFilter only
+* Avoid aggressive CSP enforcement directly in Tomcat
+* Implement CSP later through a reverse proxy or load balancer if required
+
+This minimizes the risk of:
+
+* Application startup failures
+* Broken Remedy UI functionality
+* JavaScript rendering issues
+* Integration failures
+
+---
+
+# Supported Security Headers in Current Environment
+
+The following headers are successfully supported using HttpHeaderSecurityFilter:
+
+| Header                    | Status    |
+| ------------------------- | --------- |
+| X-Content-Type-Options    | Supported |
+| X-Frame-Options           | Supported |
+| X-XSS-Protection          | Supported |
+| Strict-Transport-Security | Supported |
+| Content-Security-Policy   | Deferred  |
 
 ---
 
@@ -273,13 +296,200 @@ Then restart Tomcat.
 
 The following findings should be reduced or eliminated:
 
-| Finding                        | Expected Result     |
-| ------------------------------ | ------------------- |
-| Missing X-Content-Type-Options | Resolved            |
-| Missing X-Frame-Options        | Resolved            |
-| Missing X-XSS-Protection       | Resolved            |
-| Missing HSTS                   | Resolved            |
-| Missing CSP                    | Resolved or Reduced |
+| Finding                        | Expected Result                               |
+| ------------------------------ | --------------------------------------------- |
+| Missing X-Content-Type-Options | Resolved                                      |
+| Missing X-Frame-Options        | Resolved                                      |
+| Missing X-XSS-Protection       | Resolved                                      |
+| Missing HSTS                   | Resolved                                      |
+| Missing CSP                    | May still appear until implemented separately |
+
+---
+
+# Securing the Default Tomcat HTTP 8080 Site
+
+## Overview
+
+Apache Tomcat commonly exposes the default HTTP connector on port 8080.
+
+Example:
+
+```text
+http://localhost:8080
+```
+
+While often required for internal communication or application integration, exposing port 8080 externally may introduce additional security findings during vulnerability scanning.
+
+---
+
+# Risks of Exposing Port 8080
+
+Potential risks include:
+
+* Unencrypted HTTP traffic
+* Missing HTTPS enforcement
+* Exposure of default Tomcat pages
+* Server fingerprinting and version disclosure
+* Additional attack surface
+
+---
+
+# Recommended Approaches
+
+## Option 1 — Redirect HTTP to HTTPS (Recommended)
+
+Configure Tomcat to redirect all HTTP traffic to HTTPS.
+
+Benefits:
+
+* Forces encrypted communication
+* Improves security posture
+* Reduces Qualys findings
+* Improves compliance alignment
+
+---
+
+## Option 2 — Restrict Port 8080 to Localhost Only
+
+If port 8080 is only required internally, bind it to localhost.
+
+This prevents external systems from connecting directly.
+
+---
+
+# Option 1 — Configure HTTP to HTTPS Redirect
+
+Edit:
+
+```text
+<Tomcat>\conf\server.xml
+```
+
+Locate the HTTP connector:
+
+```xml
+<Connector port="8080"
+           protocol="HTTP/1.1"
+           connectionTimeout="20000"
+           redirectPort="8443" />
+```
+
+Update configuration as needed for the environment.
+
+## Notes
+
+* In some environments HTTPS may terminate at a load balancer or reverse proxy.
+* Validate existing SSL architecture before changing redirect behavior.
+* Remedy integrations should be tested after changes.
+
+---
+
+# Option 2 — Restrict Port 8080 to Localhost
+
+If external HTTP access is unnecessary, modify the connector:
+
+```xml
+<Connector port="8080"
+           address="127.0.0.1"
+           protocol="HTTP/1.1"
+           connectionTimeout="20000"
+           redirectPort="8443" />
+```
+
+This limits access to the local server only.
+
+---
+
+# Remove Default Tomcat Applications
+
+Default Tomcat applications should not remain enabled in production.
+
+Examples:
+
+```text
+/manager
+/host-manager
+/examples
+/docs
+```
+
+## Recommended Action
+
+Remove or restrict access to:
+
+```text
+<Tomcat>\webapps\docs
+<Tomcat>\webapps\examples
+<Tomcat>\webapps\host-manager
+<Tomcat>\webapps\manager
+```
+
+---
+
+# Suppress Tomcat Version Disclosure
+
+Tomcat may expose version details in HTTP responses and error pages.
+
+Example:
+
+```text
+Server: Apache-Coyote/1.1
+```
+
+---
+
+## Recommended Configuration
+
+Edit:
+
+```text
+<Tomcat>\conf\server.xml
+```
+
+Update connector:
+
+```xml
+<Connector port="443"
+           server="SecureServer"
+           ... />
+```
+
+Or suppress entirely where supported.
+
+---
+
+# Validate Port Exposure
+
+Run the following commands:
+
+```bash
+netstat -ano | findstr :8080
+```
+
+And:
+
+```bash
+curl -I http://server-name:8080
+```
+
+Verify:
+
+* Redirect behavior
+* Access restrictions
+* Security headers
+* No unnecessary application exposure
+
+---
+
+# Additional Validation Checklist
+
+| Validation Item                 | Status |
+| ------------------------------- | ------ |
+| HTTP redirect tested            | ☐      |
+| Port 8080 externally restricted | ☐      |
+| Default Tomcat apps removed     | ☐      |
+| Version disclosure minimized    | ☐      |
+| Remedy integrations validated   | ☐      |
 
 ---
 
@@ -327,6 +537,37 @@ Recommended activities:
 ---
 
 # Troubleshooting Guide
+
+## Issue: Tomcat service fails with Error 1067
+
+### Possible Cause
+
+Unsupported or invalid Valve configuration in `server.xml`.
+
+Example unsupported configuration:
+
+```xml
+<Valve className="org.apache.catalina.valves.HttpHeaderSecurityValve"
+       contentSecurityPolicy="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:;" />
+```
+
+### Resolution
+
+1. Remove the unsupported Valve entry from `server.xml`
+2. Restore backup if necessary
+3. Restart Tomcat service
+
+### Notes
+
+The environment successfully supports:
+
+```xml
+org.apache.catalina.filters.HttpHeaderSecurityFilter
+```
+
+within `conf/web.xml`.
+
+---
 
 ## Issue: Remedy pages fail to load
 
@@ -405,12 +646,3 @@ The recommended configuration:
 * Maintains compatibility with Remedy application functionality
 
 The implementation includes rollback procedures, validation guidance, and operational testing recommendations.
-
----
-
-# References
-
-* Apache Tomcat Security Documentation
-* BMC Remedy AR System Documentation
-* Qualys Vulnerability KnowledgeBase
-* OWASP Secure Headers Project
