@@ -121,16 +121,14 @@ Add the following configuration inside the `<web-app>` section.
 
 ```xml
 <filter>
-  <filter-name>securityHeadersFilter</filter-name>
+  <filter-name>httpHeaderSecurity</filter-name>
   <filter-class>org.apache.catalina.filters.HttpHeaderSecurityFilter</filter-class>
 
-  <!-- Prevent MIME sniffing -->
   <init-param>
-    <param-name>xContentTypeOptions</param-name>
-    <param-value>nosniff</param-value>
+    <param-name>blockContentTypeSniffingEnabled</param-name>
+    <param-value>true</param-value>
   </init-param>
 
-  <!-- Clickjacking protection -->
   <init-param>
     <param-name>antiClickJackingEnabled</param-name>
     <param-value>true</param-value>
@@ -141,13 +139,6 @@ Add the following configuration inside the `<web-app>` section.
     <param-value>SAMEORIGIN</param-value>
   </init-param>
 
-  <!-- Legacy browser XSS protection -->
-  <init-param>
-    <param-name>xssProtectionEnabled</param-name>
-    <param-value>true</param-value>
-  </init-param>
-
-  <!-- Enable HSTS -->
   <init-param>
     <param-name>hstsEnabled</param-name>
     <param-value>true</param-value>
@@ -160,7 +151,7 @@ Add the following configuration inside the `<web-app>` section.
 </filter>
 
 <filter-mapping>
-  <filter-name>securityHeadersFilter</filter-name>
+  <filter-name>httpHeaderSecurity</filter-name>
   <url-pattern>/*</url-pattern>
 </filter-mapping>
 ```
