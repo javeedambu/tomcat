@@ -124,11 +124,13 @@ Add the following configuration inside the `<web-app>` section.
   <filter-name>httpHeaderSecurity</filter-name>
   <filter-class>org.apache.catalina.filters.HttpHeaderSecurityFilter</filter-class>
 
+  <!-- Prevent MIME sniffing -->
   <init-param>
     <param-name>blockContentTypeSniffingEnabled</param-name>
     <param-value>true</param-value>
   </init-param>
 
+  <!-- Clickjacking protection -->
   <init-param>
     <param-name>antiClickJackingEnabled</param-name>
     <param-value>true</param-value>
@@ -139,6 +141,7 @@ Add the following configuration inside the `<web-app>` section.
     <param-value>SAMEORIGIN</param-value>
   </init-param>
 
+  <!-- Enable HSTS -->
   <init-param>
     <param-name>hstsEnabled</param-name>
     <param-value>true</param-value>
